@@ -1,5 +1,6 @@
 # ORIE 4741 Project: MIMIC-III Health Care System
-## his is the github repository for the final project of ORIE 4741, Fall 2020.
+This is the github repository for the final project of ORIE 4741, Fall 2020.
+
 Group members: Kathy JaYoung Byun (jb2297), Raye Liu (zl285), Jody Zhu (qz245)
 
 ## Description of the project 
@@ -9,4 +10,8 @@ We will be doing segmentation and validating the approaches by trying them on su
 
 ## Dataset
 The dataset we will by using is the MIMIC-III, 
-third edition of Medical Information Mart for Intensive Care.
+third edition of Medical Information Mart for Intensive Care. 
+
+Mimic-III is a deidentified clinical database that consists of health data of 3,423 distinct critical care hospital admissions from 38,597 distinct adult patients at the Beth Israel Deaconess Medical Center in Boston, Massachusetts from 2001 to 2012. Information such as gender, race, diagnosis, ICD9 codes, prescriptions, ICU stays, procedures, vital signs, mortality, laboratory measurements, and unstructured textual data from various healthcare provider notes and analyses, are included.
+
+Link: https://mimic.physionet.org/
