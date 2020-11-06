@@ -1,4 +1,4 @@
-# ORIE 4741 Project: MIMIC-III Health Care System
+# ORIE 4741 Project: Population Segmentation for Health System Management
 This is the github repository for the final project of ORIE 4741, Fall 2020.
 
 Group members: Kathy JaYoung Byun (jb2297), Raye Liu (zl285), Jody Zhu (qz245)
