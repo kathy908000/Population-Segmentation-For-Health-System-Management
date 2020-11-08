@@ -4,14 +4,11 @@ This is the github repository for the final project of ORIE 4741, Fall 2020.
 Group members: Kathy JaYoung Byun (jb2297), Raye Liu (zl285), Jody Zhu (qz245)
 
 ## Description of the project 
-We are researching on making valid population segemantation of a certain group of patients given the various information and individual features of this group. In other words, we are aiming to come up with valid clustering of the patients, and within each of the patient clusters, the homogeneousness should be maximized.
+Our research is on making valid population segmentation of a certain group of patients given their demographic and health-related information. The purpose is to then be able to make better predictions within these "homogeneous" clusterings of the patients.
 
-We will be doing segmentation and validating the approaches by trying them on subgroups of the patients with certain diseases. We will test the inside clusters by examining the similarity of patients in each cluster, for instance, calculating the variance of the length of ICU-stay time and the number of hospitalizations of patients in each cluster, whereas smaller variance indicates higher homogeneousness.
+Some of the models we will use include linear regression and random forest regression for predictions and k-means clustering and random forest for clustering. We will further examine the performance of our clusters by comparing them to an error benchmark derived from the entire dataset as well as measuring the variance between predictions within the same cluster.
 
 ## Dataset
-The dataset we will by using is the MIMIC-III, 
-third edition of Medical Information Mart for Intensive Care. 
+The dataset we are using is from New York State’s Statewide Planning and Research Cooperative System’s (SPARCS) Hospital Inpatient Discharges. It contains information about patients discharged from hospitals in New York State in 2012. Some of the fields are race, age group, type of admission, diagnosis, severity index, length of stay, and total charges. To narrow down the scope we are starting with, we are only focusing on cancer patients. The SPARCS_Cancer data has 35,804 rows/examples and 33 columns/features before preprocessing.
 
-Mimic-III is a deidentified clinical database that consists of health data of 3,423 distinct critical care hospital admissions from 38,597 distinct adult patients at the Beth Israel Deaconess Medical Center in Boston, Massachusetts from 2001 to 2012. Information such as gender, race, diagnosis, ICD9 codes, prescriptions, ICU stays, procedures, vital signs, mortality, laboratory measurements, and unstructured textual data from various healthcare provider notes and analyses, are included.
-
-Link: https://mimic.physionet.org/
+Link: https://health.data.ny.gov/Health/NYC-SPARCS/p789-b5dv/data
