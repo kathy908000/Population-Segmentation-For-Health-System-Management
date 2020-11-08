@@ -1,4 +1,4 @@
-# ORIE 4741 Project: Population Segmentation For Health System Management
+# ORIE 4741 Project: Population Segmentation For Health System Management based on SPARCS Data
 This is the github repository for the final project of ORIE 4741, Fall 2020.
 
 Group members: Kathy JaYoung Byun (jb2297), Raye Liu (zl285), Jody Zhu (qz245)
