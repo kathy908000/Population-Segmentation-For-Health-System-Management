@@ -1,0 +1,210 @@
+\documentclass{article}
+\usepackage[utf8]{inputenc}
+
+\title{ORIE 4741 \space \space Project Final Report}
+\author{Kathy Byun, Raye Liu, Jody Zhu}
+\date{December 13, 2020}
+
+\usepackage[margin=1.1in]{geometry}
+\usepackage{natbib}
+\usepackage{tabularx}
+\usepackage{changepage} 
+\usepackage{flexisym}
+\usepackage{algorithm}
+\usepackage{algorithmic}
+\usepackage{float}
+\usepackage{caption}
+\usepackage{fancyhdr}
+\usepackage{subcaption}
+\def\mathbi#1{\textbf{\em #1}} 
+\usepackage{graphicx}
+
+\begin{document}
+
+\maketitle
+\section{Problem}
+The goal is to predict the length of stay and total cost of each cancer patient in New York State hospitals from demographics and health data using models. Furthermore, we want to explore whether clustering the patients into “homogeneous” groups can yield better predictions than in the general body. We will use linear regression with quadratic loss, huber loss, and quadratic regularization, low rank model, k-means clustering, and hierarchical clustering.
+\newline
+
+\section{Background}
+Health data is very complicated but can provide beneficial information to both patients and healthcare providers when unlocked. Length of stay and total cost are themselves points of interest for planning ahead in terms of time and finances. Here, we will also rely on them when analyzing our clusters. Homogeneous clusters can provide intelligible insight as shown in research done at John Hopkins on Adjusted Clinical Group actuarial cells, or clusters. For instance, more consistent care can be delivered to patients with the same conditions. A greater number of early diagnoses can be made for individuals without known hereditary predispositions as well. On the hospital management side, well-segmented clusters can be used to help anticipate the high cost and long stay patients.
+\newline
+
+\section{Dataset}
+The dataset used in this project is New York State’s Statewide Planning and Research Cooperative System’s (SPARCS) Hospital Inpatient Discharges. It contains information about patients discharged from hospitals in New York State in 2012. Some of the fields are race, age group, type of admission, diagnosis, severity index, length of stay, and total charges. To narrow down the scope we are starting with, we will only perform data analysis on cancer patients. The SPARCS\_Cancer data has 35,804 rows/examples and 33 columns/features before preprocessing. There are 420 missing entries in Zip Code, 9,438 in Payment Typology 2, 21,636 in Payment Typology 3, and 0 otherwise. As we will see later in this report, these missing values will not impact our results.
+\newline
+
+\section{Data Visualization}
+We generated multiple boxplots to get a better picture of our data. To gauge the feasibility of finding good clusters, we pick a simple grouping by facility ID which treats each facility separately. In Figure 1, the median length of stay varies slightly across hospitals in the Bronx, except for number 1175 (5-7 days vs. 13 days): approximately 75\% of its values are greater than 50\% of the values from the others. Facility ID cannot be confirmed as an important feature yet because 1175 might be a special hospital. This is a decent start although our actual clusters are likely to be characterized by a combination of attributes.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.5\textwidth]{4741_fig1.png}
+    \caption{Length of Stay for each Facility in Bronx}
+\end{figure}
+\noindent
+Next, we look at APR Risk of Mortality. Prior knowledge tells us that more severe symptoms tend to have higher mortality rates and longer treatments. From Figure 2, this trend is evident in both length of stay and total charges. The differences between the boxplot at each level support the clustering method, and APR Risk of Mortality is likely to play a part as a significant feature to consider.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.9\textwidth]{4741_fig2.png}
+    \includegraphics[width=0.9\textwidth]{4741_fig3.png}
+    \caption{Length of Stay \& Total Charges for each level of APR Risk of Mortality }
+\end{figure}
+\noindent
+
+\section{Data Preprocessing}
+Our first target feature Length of Stay is continuous. Its values are capped by 120+ which we replaced with 120. The other target feature Total Cost is continuous as well, ranging from 1,562.44 to 2,193,723.15, with a mean of 5,8879.05. APR Severity of Illness and Risk of Mortality are ordinal in nature and rewritten as integers 1 through 4 with 1 as Minor and 4 as Extreme. For Age Group, its 5 groups are translated into ordinal form in increasing age order. The remaining features are categorical, and the nominal values are converted to numbers using one-hot encoding which creates a column for each possible value and puts a 1 in the applicable column, 0 otherwise. This is simplified into a single column for binary categorical features.
+\newline
+
+\section{Feature Selection}
+We use linear regression with quadratic loss to determine which features to include as well as to establish a baseline for later. Our dataset is split into training and testing sets (3:1) so that we can measure our models’ accuracy. From the original 33 features, those that have the same value for every example are first removed. So are features that are replicates of each other (i.e. code and description) to avoid collinearity, which inflates variance and lowers model interpretability. The three columns with missing entries fall under this category. 
+\newline
+\newline
+Then, we perform 5-fold cross validation to find the combination of features with the best prediction ability and least likelihood of overfitting. A portion of the results is summarized in Figure 3. To examine how inliers did, mean absolute error is selected for its relative insensitivity to outliers. The second to last column is the expected variance from out-of-sample error calculated using bootstrap of 500 samples of size 5000. High variance is typically associated with overfitting. Lastly, a higher $R^2$ is better since it is a goodness-of-fit measure.
+\newline\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.8\textwidth]{4741_fig4.png}
+    \caption{Cross-Validation Statistics}
+\end{figure}
+\noindent
+We suspected underfitting when taking fewer than 5 features, leading us to increase the number of features and ultimately deciding to include all the ones in the table. The MAE and bootstrap variance are decent. Most notably, its $R^2$ is a 3\% improvement compared to the others. We will now transition to discuss models in further detail.
+\newline
+
+\section{Models}
+\subsection{Linear Regression}
+First, we constructed a model with the quadratic loss function and a small quadratic regularizer, otherwise known as ridge regression. The target feature is length of stay. Although the dataset is right-skewed in Figure 5 for length of stay, it stays rather continuous through the maximum value. Quadratic loss keeps in consideration the right-most points that may or may not be outliers. The regularizer will make the solution unique.
+\newline
+\newline
+In the case that the large values are outliers, we built a second model with Huber loss and a small quadratic regularizer. Huber loss is more robust by punishing outliers less (absolute value) than errors within a reasonable range (quadratic again). The regularizer serves the same purpose. We observe that the type of regularizer and lambda does not affect the results much if at all.
+\newline
+\newline
+After 5-fold cross validation, the average test MAE is 3.382 for quadratic loss compared to a higher 3.464 for Huber loss. $R^2$ is 0.616 for quadratic loss versus a lower 0.467 for Huber loss. Furthermore, the mean length of stay is 7.19 for quadratic loss and 5.62 for Huber loss. The actual mean is 7.25 (Figure 4), so the predictions by our first model are overall more reliable.
+\newline\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.75\textwidth]{4741_fig5.png}
+    \caption{Length of Stay Statistics}
+\end{figure}
+\noindent
+We will use linear regression with quadratic loss for cluster analysis. However, this model is not recommended for real world implementation. The optimal range of $R^2$ is between 0.7 and 0.9, which is not met. Linear regression is also not suitable and will have low accuracy if the data is not linear. There are likely still better models out there.
+\newline
+
+\subsection{K-Means Clustering}
+The algorithm consists of two alternating steps: selecting $k$ numbers of centroids and assigning each data point to its closest centroid. Then, the means of the current clusters become the new centroids and so on until it converges. The parameter $k$ is the number of resulting clusters as well. We used the low rank models package and Python scikit-learn package to solve k-means clustering with the features from feature selection above.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.55\textwidth]{4741_fig6.png}
+    \caption{Sum of Squared Distance at each K}
+\end{figure}
+\noindent
+Figure 5 shows linear decrease approximately from when the number of clusters $k$ is 6. The value of $k$ where the plot starts to show linear relationship indicates the optimal number of clusters. We proceed to run k-means clustering for $5 \leq k \leq 8$. Our dataset is split 3:1 into training and testing sets. K-means clustering is applied to the training set. Using the model, each patient from the test set is then assigned to the closest training cluster. Finally, predictions are made by linear regression with quadratic loss.
+\begin{figure}[H]
+    \centering
+    \includegraphics[width=0.6\textwidth]{4741_fig7.png}
+    \caption{Predicting on K Clusters Summary}
+\end{figure}
+\noindent
+For all clusters with $k > 1$ in Figure 6, their $R^2$ values are slightly greater than the linear model trained on original data with $k = 6$ boasting the highest. The 0.02 increase in $R^2$ when $k = 6$ indicates that 2\% more of the variance in length of stay is explained by the features in the model. The test MAEs for linear models trained on clustered data are slightly smaller than that of the original as well. However, because the difference is small, it is not clear if the improvement is statistically significant.
+\newline
+
+\subsection{Hierarchical Clustering}
+Hierarchical Clustering Analysis generally fall into two types: agglomerative (a "bottom-up" approach: each observation starts in its own cluster, and pairs of clusters are merged as one moves up the hierarchy) and divisive (a "top-down" approach: all observations start in one cluster, and splits are performed recursively as one moves down the hierarchy). In our dataset, we use the bottom-up agglomerative approach. Considering the uniqueness of each individual patient, we start with each of them as an individual cluster and then merge the clusters that share commonalities. We use all 35,804 observations and 395 columns (post-feature engineering and scaled). In this part, our goal is to find indicative clustering assignments of the patients and a potential cluster that represents the high-resource-consumption patients. To evaluate resource consumption, we will use Total Charges, Length of Stay, APR Mortality Risk, and APR Severity of Illness these four target variables as reference. 
+\newline
+\newline
+First, we select the optimal number of clusters $k$ using the R packages factoextra and NbClust. Figure 7 on the next page represent the evaluation results based on the Elbow method, the Silhouette method, and gap statistics. The Elbow method suggests an x-intercept of 4, meaning 4 is the optimal number of clusters. Silhouette suggests an optimal number of 2. Gap statistic suggests a cluster of one which is trivial. However, we want a higher level of interpretability, so we will re-evaluate by requiring one cluster of patients to have relatively small cardinality but high consumption of healthcare resources, which was noticed in data visualization. After training the models on 2, 4, 6, 9 and 16 (local maximum points in the Silhouette plots), none of them returned the characteristic cluster we are looking for. Thus, following the trend that the average silhouette width and gap statistics slowly increase after $k = 6$, we picked a large $k$ and trained a 100-cluster bottom-up model. 100 is not too excessive considering there are over 30,000 total observations.
+\begin{figure}[h]
+    \centering
+    \includegraphics[width = 0.65\textwidth]{op_clus.png}
+    \caption{Optimal Cluster Number}
+\end{figure}
+\noindent
+We will focus on the 100-cluster model which does return the particular high-resource-consuming cluster. Statistical analysis is preferred over validation for this type of unsupervised learning, so we will examine the quality of the clusters with a combination of standard deviation comparison and external manual interpretation (like for glass-box models).
+\newline
+\newline
+The whole-set standard deviations of the potential target columns are: Total Charges: 75,993.88; APR Mortality Risk (ranged from 1 to 4): 0.9229;
+APR Severity of Illness (ranged from 1 to 4): 0.9227; Length of Stay: 11.0596. We calculate the standard deviations within each cluster and obtain the plots in Figure 8 on Page 7 (red line is the whole-set value). We can see a significant decrease in the standard deviation for most of the clusters. 76\% of the clusters have a strictly lower standard deviation on Total Charges, 82\% on APR Mortality Risk, 91\% on APR Severity of Illness, 69\% on Length of Stay. This indicates that the clustering method has done a decent job at correctly identifying the patients with less discrepancy and assigning them to the same group. On the other hand, the outliers do exist, for instance, Cluster No.72 has a standard deviation drastically greater than the whole-set value. These outlier clusters are generated because their clustering is based on other features like diagnosis on certain APR-DRG, APR-MDC and APR-Procedure codes, and these codes are not directly or crucially influencing the target response variables we are examining. For instance, Cluster No.72 patients share in common that they have all been diagnosed with Mental Diseases and Disorders and over 90\% percent of them has been diagnosed with Digestive Malignancy. These two disease categories have severity and mortality risk ranking all the way from the lowest to the highest based on the APR-DRG Weights System, thus it is hard to distinguish those with high mortality risk from those with relatively low mortality risk by only clustering from these two features. Even if most of these outlier clusters are not the “high resource users” we focus on in this project, we should still come up with solution to improve the clustering quality to lower down the standard deviation and eliminate these outliers.
+\newline
+\begin{figure}[h]
+         \centering
+         \includegraphics[width=0.9\textwidth]{cost_std.png}
+         \includegraphics[width=0.9\textwidth]{stay_std.png}
+         \includegraphics[width=0.9\textwidth]{mort_std.png}
+         \includegraphics[width=0.9\textwidth]{serv_std.png}
+         \caption{Standard Deviation Comparison}
+\end{figure}
+\newline
+Aiming to find the so-called “High Resource Users (HRU)” group, we calculate the mean value of the target response variables within each cluster and sort them in descending orders to find out those clusters that have high values. It is reasonable to view these four target columns (financial expense, risk of mortality, severity of disease, and length of hospitalization) as representations of the resource usage of a patient in the medical system. By definition, HRUs consist of a small proportion of the population that large proportion of health care spending is incurred by. We can clearly identify the cluster of HRUs, No.73, with a significantly peak in both Total Charges, Severity, Mortality, and Length of Stay. 
+\newline
+\newline
+There are 134 patients in Cluster No.73, 0.37\% of the entire population. The statistics of this cluster compared with the whole population is listed in the table of Figure 9.
+\begin{figure}[H]
+         \centering
+         \includegraphics[width=0.6\textwidth]{4741_newtable.png}
+         \caption{Comparison of Resource Consumption between Cluster No.73 and the Whole Population}
+\end{figure}
+\noindent
+For understanding these statistics and finding out why patients in this clusters have an overwhelmingly larger expense and risk of death compared with other patients, we print out the columns data of this cluster. We find that the commonality these patients share is that they have all been diagnosed with APR-DRG code 4--Tracheostomy with MV 96+ hours with extensive procedure or ECMO, and they have all been through major surgeries (APR Surgical Description). Also, one common diagnosis is respiratory malignancy, which is presumably the cause of the using of ECMO (extracorporeal membrane oxygenation, used in open-heart surgery. It pumps and oxygenates a patient's blood outside the body, allowing the heart and lungs to rest). This lies in accordance for the long stay, high costs, and high mortality since ECMO is very costly to monitor and often it applies to critical patients.
+\newline
+\newline
+More interesting and less obvious observations are made when we look at the top 10 clusters sorted in descending order (Figure 10) by the target columns as well as age and gender. During data preprocessing, gender was one-hot encoded as 1 for female and 0 for male, and a cluster consists of more males if the value in the gender column is less than 0.5. Amongst the high resource user clusters according to length of stay and total charges, many are majority male. For the longevial clusters, 5 out of 10 clusters (including the top 4) are predominantly female and the rest half is equal in gender distribution. This indicates that females tend to live longer than males.
+\begin{figure}[H]
+         \centering
+         \centering
+     \begin{subfigure}[b]{0.4\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{cost.png}
+         \caption{Top 10 Total Charge Clusters}
+         \label{fig:y equals x}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.4\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{stay.png}
+         \caption{Top 10 Length of Stay Clusters}
+         \label{fig:three sin x}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.4\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{age.png}
+         \caption{Top 10 Age Clusters}
+         \label{fig:three sin x}
+     \end{subfigure}
+     \begin{subfigure}[b]{0.4\textwidth}
+         \centering
+         \includegraphics[width=\textwidth]{gender_f.png}
+         \caption{Top 10 Gender Clusters}
+         \label{fig:three sin x}
+     \end{subfigure}
+     \caption{Sorting Descending by the Target Columns}
+\end{figure}
+\noindent
+\newline
+
+\section{Conclusion and Future Work}
+The variations of linear regression returned decent results, but other models might be better suited given that the data is probably not linear. We were still able to use it to measure the performance of our k-means clusters, which saw slight advancement compared to without clustering. With the method of hierarchical clustering, we were able to find both more homogeneous and interpretable clusters. Standard deviation improved for approximately 70\% of the clusters, and we were able to confirm the reliability of the clusters by cross-analyzing the characteristics of patients with external health information. Overall, we are fairly confident in this model and the predictions to be made using it.
+\newline
+\newline
+Because health data pertains to life and death, there is the danger of our models becoming weapons of math destruction if used incorrectly. The same can be said about corrupting fairness. Doctors should not diagnose or treat patients solely based on our estimates. Hospitals should not shorten care for female patients because of the observations made from the clusters. This is not the purpose of the models in their current form. Clustering does support greater individual fairness by making similar predictions about similar patients, but adjustments are still needed to account for fairness in protected attributes. Until then, the models can aid patients in anticipating their stay and hospital management in staffing and purchase planning.
+
+\newpage 
+\section{References}
+1.	Na, Shi, et al. \textit{Research on k-Means Clustering Algorithm: An Improved k-Means Clustering Algorithm}. 2010 Third International Symposium on Intelligent Information Technology and Security Informatics, 2010, doi:10.1109/iitsi.2010.74. 
+\newline
+\newline
+2. Rosella, Laura. \textit{Predicting High Health Care Resource Utilization in a Single-Payer Public Health Care System}. Medical Care, Oct. 2018.
+\newline
+\newline
+3.	Rouzbahman, Mahsa, et al. \textit{Can Cluster-Boosted Regression Improve Prediction of Death and Length of Stay in the ICU?} IEEE, 3 Feb. 2016, doi:10.1109/JBHI.2016.2525731. 
+\newline
+\newline
+4.	S. Patel, S. Sihmar and A. Jatain, \textit{A study of hierarchical clustering algorithms}. 2015 2nd International Conference on Computing for Sustainable Global Development (INDIACom), New Delhi, 2015, pp. 537-541.
+\newline
+\newline
+5. \textit{The Johns Hopkins ACG System Technical Reference Guide.} The Johns Hopkins ACG System, Johns Hopkins School of Public Health, Dec. 2009, www.healthpartners.com/ucm/groups/public/@hp/@public/
+\newline
+documents/documents/dev\_057914.pdf. 
+\newline
+\newline
+6.	Udell, Madeleine, et al. \textit{Generalized Low Rank Models.} 2016, doi:10.1561/9781680831412.
+\newline
+\newline
+
+
+\end{document}
